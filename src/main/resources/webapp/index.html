@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Médico - JADE</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🏥 Sistema de Atención Médica</h1>
+        <p>Agentes Inteligentes con JADE</p>
+    </header>
+
+    <div class="card">
+        <h2>📋 Solicitar Cita Médica</h2>
+        <form id="citaForm">
+            <div class="form-group">
+                <label>Nombre Completo:</label>
+                <input type="text" id="nombre" required>
+            </div>
+
+            <div class="form-group">
+                <label>ID Paciente:</label>
+                <input type="text" id="pacienteId" required>
+            </div>
+
+            <div class="form-group">
+                <label>Síntomas:</label>
+                <textarea id="sintomas" rows="4" required></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary">Solicitar Cita</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>📊 Estado de la Consulta</h2>
+        <div id="estado" class="status-box">
+            <p>Esperando solicitud...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🩺 Diagnóstico</h2>
+        <div id="diagnostico" class="diagnostico-box">
+            <p>No hay diagnóstico disponible</p>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
