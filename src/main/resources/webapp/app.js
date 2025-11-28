@@ -3,13 +3,20 @@ const API_URL = 'http://localhost:7070/api';
 let currentCita = null;
 let eventSource = null;
 
+// Generar ID único para cada paciente (timestamp + random)
+function generarIDUnico() {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000);
+    return `P${timestamp}${random}`;
+}
+
 // Manejo del formulario
 document.getElementById('citaForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const cita = {
         nombre: document.getElementById('nombre').value,
-        pacienteId: document.getElementById('pacienteId').value,
+        pacienteId: generarIDUnico(), // 🔥 ID único automático
         sintomas: document.getElementById('sintomas').value
     };
 
@@ -39,7 +46,7 @@ document.getElementById('citaForm').addEventListener('submit', async (e) => {
 
             setTimeout(() => {
                 updateStatus('doctor', 'Doctor realizando diagnóstico...');
-            }, 4000);
+            }, 5000);
 
             // Iniciar polling para obtener el diagnóstico
             startPollingDiagnostico(cita.pacienteId);
@@ -90,7 +97,7 @@ function getStepTitle(step) {
 
 async function startPollingDiagnostico(pacienteId) {
     let attempts = 0;
-    const maxAttempts = 20; // Aumentado a 20 intentos
+    const maxAttempts = 20;
 
     const interval = setInterval(async () => {
         attempts++;
@@ -99,9 +106,9 @@ async function startPollingDiagnostico(pacienteId) {
             const response = await fetch(`${API_URL}/diagnostico/${pacienteId}`);
             const data = await response.json();
 
-            console.log(`Intento ${attempts}:`, data); // Debug
+            console.log(`Intento ${attempts}:`, data);
 
-            // 🔥 CORREGIDO: Verificar que el diagnóstico esté completo
+            // Verificar que el diagnóstico esté completo
             if (data.pacienteId && data.diagnostico &&
                 data.diagnostico !== "En proceso..." &&
                 data.diagnostico !== null) {
@@ -124,33 +131,35 @@ async function startPollingDiagnostico(pacienteId) {
                 updateStatus('error', 'Error al obtener diagnóstico');
             }
         }
-    }, 2000); // Cada 2 segundos
+    }, 2000);
 }
 
 function displayDiagnostico(data) {
     const diagnosticoDiv = document.getElementById('diagnostico');
 
     const html = `
-        <div class="alert alert-success">
-            <h3>✅ Diagnóstico Recibido</h3>
+        <div class="alert-success">
+            <h3>✅ Diagnóstico Completado</h3>
         </div>
         
-        <div style="margin-top: 20px;">
-            <h4 style="color: #667eea; margin-bottom: 10px;">🩺 Diagnóstico:</h4>
-            <p style="font-size: 1.1em; color: #333;">${data.diagnostico}</p>
+        <div class="diagnostico-content">
+            <div class="diagnostico-item">
+                <h4>🩺 Diagnóstico</h4>
+                <p>${data.diagnostico}</p>
+            </div>
+            
+            <div class="diagnostico-item">
+                <h4>💊 Tratamiento Recomendado</h4>
+                <p>${data.tratamiento}</p>
+            </div>
+            
+            <div class="diagnostico-item">
+                <h4>📅 Próxima Cita</h4>
+                <p>${data.fechaProxima}</p>
+            </div>
         </div>
         
-        <div style="margin-top: 20px;">
-            <h4 style="color: #667eea; margin-bottom: 10px;">💊 Tratamiento:</h4>
-            <p style="font-size: 1.1em; color: #333;">${data.tratamiento}</p>
-        </div>
-        
-        <div style="margin-top: 20px;">
-            <h4 style="color: #667eea; margin-bottom: 10px;">📅 Próxima Cita:</h4>
-            <p style="font-size: 1.1em; color: #333;">${data.fechaProxima}</p>
-        </div>
-        
-        <button onclick="resetForm()" class="btn-primary" style="margin-top: 20px;">
+        <button onclick="resetForm()" class="btn-primary" style="margin-top: 24px;">
             Nueva Consulta
         </button>
     `;
@@ -161,7 +170,7 @@ function displayDiagnostico(data) {
 function resetForm() {
     document.getElementById('citaForm').reset();
     document.getElementById('estado').innerHTML = '<p>Esperando solicitud...</p>';
-    document.getElementById('diagnostico').innerHTML = '<p>No hay diagnóstico disponible</p>';
+    document.getElementById('diagnostico').innerHTML = '<p>El diagnóstico aparecerá aquí una vez completada la consulta</p>';
     currentCita = null;
 }
 

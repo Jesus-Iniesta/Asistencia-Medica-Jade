@@ -10,42 +10,37 @@
 <div class="container">
     <header>
         <h1>🏥 Sistema de Atención Médica</h1>
-        <p>Agentes Inteligentes con JADE</p>
+        <p>Sistema distribuido con agentes inteligentes</p>
     </header>
 
     <div class="card">
-        <h2>📋 Solicitar Cita Médica</h2>
+        <h2>📋 Nueva Consulta Médica</h2>
         <form id="citaForm">
             <div class="form-group">
-                <label>Nombre Completo:</label>
-                <input type="text" id="nombre" required>
+                <label>Nombre Completo</label>
+                <input type="text" id="nombre" placeholder="Ej: Juan Pérez García" required>
             </div>
 
             <div class="form-group">
-                <label>ID Paciente:</label>
-                <input type="text" id="pacienteId" required>
+                <label>Síntomas</label>
+                <textarea id="sintomas" rows="4" placeholder="Describe tus síntomas aquí..." required></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Síntomas:</label>
-                <textarea id="sintomas" rows="4" required></textarea>
-            </div>
-
-            <button type="submit" class="btn-primary">Solicitar Cita</button>
+            <button type="submit" class="btn-primary">Solicitar Consulta Médica</button>
         </form>
     </div>
 
     <div class="card">
-        <h2>📊 Estado de la Consulta</h2>
+        <h2>📊 Progreso de la Consulta</h2>
         <div id="estado" class="status-box">
             <p>Esperando solicitud...</p>
         </div>
     </div>
 
     <div class="card">
-        <h2>🩺 Diagnóstico</h2>
+        <h2>🩺 Resultado del Diagnóstico</h2>
         <div id="diagnostico" class="diagnostico-box">
-            <p>No hay diagnóstico disponible</p>
+            <p>El diagnóstico aparecerá aquí una vez completada la consulta</p>
         </div>
     </div>
 </div>
