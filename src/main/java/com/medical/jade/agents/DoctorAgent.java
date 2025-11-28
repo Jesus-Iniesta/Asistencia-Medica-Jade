@@ -358,7 +358,7 @@ public class DoctorAgent extends Agent {
         }
 
         if (diagnostico.contains("Dispepsia") || diagnostico.contains("emético")) {
-            return "Omeprazol 20mg antes de comidas, Metoclopramida 10mg si náuseas, comidas pequeñas y frecuentes";
+            return "Omeprazol 20mg antes de comidas, Metoclopramida 10mg si tienes náuseas, comidas pequeñas y frecuentes";
         }
 
         // === TRATAMIENTOS RESPIRATORIOS ===
