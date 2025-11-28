@@ -50,6 +50,7 @@ public class EnfermeroAgent extends Agent {
                     // Crear historia clínica
                     HistoriaClinica historia = new HistoriaClinica();
                     historia.setPacienteId(cita.getPacienteId());
+                    historia.setNombrePaciente(cita.getNombre()); // 🔥 NUEVO: Pasar nombre del paciente
                     historia.setPresionArterial(generarPresion());
                     historia.setTemperatura(generarTemperatura());
                     historia.setFrecuenciaCardiaca(generarFrecuencia());
