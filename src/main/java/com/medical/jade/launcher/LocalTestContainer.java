@@ -32,28 +32,21 @@ public class LocalTestContainer {
             System.out.println("🎯 Modo: Simulación de computadora secundaria");
             System.out.println("===========================================\n");
 
-            // CONTENEDOR DE PRUEBA: Doctor + Paciente (simulando computadora 2)
+            // CONTENEDOR DE PRUEBA: Solo Doctor
+            // Los pacientes se crearán dinámicamente desde la interfaz web
             AgentController doctor = testContainer.createNewAgent(
                     "Doctor",
                     "com.medical.jade.agents.DoctorAgent",
                     null
             );
 
-            AgentController paciente = testContainer.createNewAgent(
-                    "Paciente-P001",
-                    "com.medical.jade.agents.PacienteAgent",
-                    new Object[]{"P001", "María García", "Dolor de cabeza"}
-            );
-
-            // Iniciar agentes
+            // Iniciar agente
             doctor.start();
-            paciente.start();
 
-            System.out.println("✅ AGENTES EN CONTENEDOR DE PRUEBA:");
+            System.out.println("✅ AGENTE EN CONTENEDOR DE PRUEBA:");
             System.out.println("   1. Doctor - Realiza diagnósticos");
-            System.out.println("   2. Paciente-P001 - Paciente de ejemplo");
-            System.out.println("\n🎉 Sistema de prueba funcionando!");
-            System.out.println("💡 Total: 4 agentes en 2 contenedores (misma computadora)\n");
+            System.out.println("\n⏳ Esperando pacientes desde la interfaz web...");
+            System.out.println("💡 Los pacientes se crean automáticamente al enviar citas\n");
             System.out.println("📝 Nota: Para producción usa RemoteContainer.java en computadora separada");
 
         } catch (Exception e) {
@@ -66,4 +59,3 @@ public class LocalTestContainer {
         }
     }
 }
-

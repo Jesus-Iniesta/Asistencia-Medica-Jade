@@ -90,7 +90,7 @@ function getStepTitle(step) {
 
 async function startPollingDiagnostico(pacienteId) {
     let attempts = 0;
-    const maxAttempts = 15;
+    const maxAttempts = 20; // Aumentado a 20 intentos
 
     const interval = setInterval(async () => {
         attempts++;
@@ -99,13 +99,23 @@ async function startPollingDiagnostico(pacienteId) {
             const response = await fetch(`${API_URL}/diagnostico/${pacienteId}`);
             const data = await response.json();
 
-            if (data.diagnostico) {
+            console.log(`Intento ${attempts}:`, data); // Debug
+
+            // 🔥 CORREGIDO: Verificar que el diagnóstico esté completo
+            if (data.pacienteId && data.diagnostico &&
+                data.diagnostico !== "En proceso..." &&
+                data.diagnostico !== null) {
+
                 clearInterval(interval);
                 updateStatus('completado', 'Consulta finalizada exitosamente');
                 displayDiagnostico(data);
+
             } else if (attempts >= maxAttempts) {
                 clearInterval(interval);
                 updateStatus('error', 'Tiempo de espera agotado');
+                console.error('Diagnóstico no recibido después de ' + maxAttempts + ' intentos');
+            } else {
+                console.log(`Esperando diagnóstico... (${attempts}/${maxAttempts})`);
             }
         } catch (error) {
             console.error('Error polling:', error);
@@ -114,7 +124,7 @@ async function startPollingDiagnostico(pacienteId) {
                 updateStatus('error', 'Error al obtener diagnóstico');
             }
         }
-    }, 1000);
+    }, 2000); // Cada 2 segundos
 }
 
 function displayDiagnostico(data) {

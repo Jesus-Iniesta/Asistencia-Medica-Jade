@@ -100,8 +100,13 @@ public class WebInterfaceServer {
 
                 System.out.println("✅ Agente " + pacienteNombre + " creado y enviando solicitud");
 
-                // Guardar en cache para tracking
-                diagnosticosCache.put(cita.getPacienteId(), null); // Placeholder
+                // 🔥 CORREGIDO: Crear diagnóstico inicial en lugar de null
+                Diagnostico diagnosticoInicial = new Diagnostico();
+                diagnosticoInicial.setPacienteId(cita.getPacienteId());
+                diagnosticoInicial.setDiagnostico("En proceso...");
+                diagnosticoInicial.setTratamiento("Pendiente");
+                diagnosticoInicial.setFechaProxima("Por determinar");
+                diagnosticosCache.put(cita.getPacienteId(), diagnosticoInicial);
 
                 String jsonResponse = gson.toJson(Map.of(
                     "status", "success",

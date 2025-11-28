@@ -8,10 +8,15 @@ import com.google.gson.Gson;
 import com.medical.jade.messages.HistoriaClinica;
 import com.medical.jade.messages.Diagnostico;
 import com.medical.jade.behaviours.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 public class DoctorAgent extends Agent {
     private Gson gson = new Gson();
     private int diagnosticosRealizados = 0;
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Override
     protected void setup() {
@@ -66,6 +71,9 @@ public class DoctorAgent extends Agent {
 
                     diagnosticosRealizados++;
 
+                    // Guardar diagnóstico en el servidor web
+                    guardarDiagnosticoEnWeb(diagnostico);
+
                     // Enviar diagnóstico al paciente
                     AID pacienteAID = new AID("Paciente-" + historia.getPacienteId(), AID.ISLOCALNAME);
                     addBehaviour(new SendResponseBehaviour(
@@ -85,6 +93,35 @@ public class DoctorAgent extends Agent {
 
         } catch (Exception e) {
             System.err.println("❌ Error en diagnóstico: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Guarda el diagnóstico en el servidor web vía HTTP POST
+     */
+    private void guardarDiagnosticoEnWeb(Diagnostico diagnostico) {
+        try {
+            String jsonDiagnostico = gson.toJson(diagnostico);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:7070/api/diagnostico"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonDiagnostico))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                System.out.println("💾 Diagnóstico guardado en servidor web (ID: " +
+                        diagnostico.getPacienteId() + ")");
+            } else {
+                System.err.println("⚠️ Error guardando en web: HTTP " + response.statusCode());
+            }
+
+        } catch (Exception e) {
+            System.err.println("⚠️ No se pudo guardar en servidor web: " + e.getMessage());
+            // No es crítico, el diagnóstico ya se envió al paciente
         }
     }
 
