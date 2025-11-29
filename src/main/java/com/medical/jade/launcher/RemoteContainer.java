@@ -5,6 +5,9 @@ import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 
 /**
  * RemoteContainer - Contenedor remoto para ejecutar en otra computadora
@@ -13,7 +16,7 @@ import jade.wrapper.ContainerController;
  * INSTRUCCIONES RÁPIDAS:
  * 1. Ejecuta MainContainer.java en la COMPUTADORA PRINCIPAL primero
  * 2. Copia la IP que muestra MainContainer
- * 3. Pégala en la variable 'mainHost' abajo (línea 26)
+ * 3. Pégala en la variable 'mainHost' abajo (línea 29)
  * 4. Ejecuta este archivo
  * 5. El Doctor se conectará automáticamente
  */
@@ -25,7 +28,7 @@ public class RemoteContainer {
             // ========================================
 
             // ⬇️ PEGA AQUÍ LA IP QUE MUESTRA MainContainer
-            String mainHost = "172.26.49.144";
+            String mainHost = "10.211.172.68";
 
             // Ejemplos:
             // String mainHost = "192.168.1.100";  // IP de la computadora principal
@@ -33,9 +36,13 @@ public class RemoteContainer {
 
             // ========================================
 
+            // Detectar la IP local de ESTA computadora (evitando VirtualBox)
+            String localIP = getRealLocalIP();
+
             System.out.println("\n===========================================");
             System.out.println("🔄 INICIANDO CONTENEDOR REMOTO...");
             System.out.println("===========================================");
+            System.out.println("📍 IP de esta computadora: " + localIP);
             System.out.println("🔌 Intentando conectar a: " + mainHost + ":1099");
             System.out.println("⏳ Esto puede tomar unos segundos...\n");
 
@@ -44,6 +51,7 @@ public class RemoteContainer {
             Profile profile = new ProfileImpl();
             profile.setParameter(Profile.MAIN_HOST, mainHost);
             profile.setParameter(Profile.MAIN_PORT, "1099");
+            profile.setParameter(Profile.LOCAL_HOST, localIP);  // ⬅️ CRÍTICO: IP local correcta
             profile.setParameter(Profile.CONTAINER_NAME, "remote-container");
 
             // Crear contenedor remoto
@@ -65,6 +73,7 @@ public class RemoteContainer {
             System.out.println("\n===========================================");
             System.out.println("✅ CONTENEDOR REMOTO ACTIVO");
             System.out.println("===========================================");
+            System.out.println("📍 IP local: " + localIP);
             System.out.println("📍 Conectado a: " + mainHost);
             System.out.println("👨‍⚕️ Agente activo: Doctor");
             System.out.println("===========================================");
@@ -96,6 +105,67 @@ public class RemoteContainer {
 
             System.err.println("Detalles técnicos del error:");
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Obtiene la IP local real, evitando direcciones loopback y VirtualBox
+     */
+    private static String getRealLocalIP() {
+        try {
+            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+
+            while (networkInterfaces.hasMoreElements()) {
+                NetworkInterface ni = networkInterfaces.nextElement();
+
+                // Saltar interfaces loopback, no activas, y VirtualBox
+                if (ni.isLoopback() || !ni.isUp() || ni.getDisplayName().toLowerCase().contains("virtual")) {
+                    continue;
+                }
+
+                // Preferir interfaces WiFi o Ethernet
+                String niName = ni.getName().toLowerCase();
+                boolean isPreferred = niName.startsWith("wlan") ||
+                                     niName.startsWith("eth") ||
+                                     niName.startsWith("en") ||
+                                     niName.startsWith("wlp");
+
+                Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+
+                    // Buscar IPv4 que NO sea loopback ni VirtualBox
+                    String hostAddress = addr.getHostAddress();
+                    if (!addr.isLoopbackAddress() &&
+                        hostAddress.indexOf(':') == -1 &&  // No IPv6
+                        !hostAddress.startsWith("127.") &&
+                        !hostAddress.startsWith("192.168.56.") && // VirtualBox
+                        !hostAddress.startsWith("192.168.122.")) { // Otras VMs
+
+                        if (isPreferred) {
+                            return hostAddress; // Retornar inmediatamente si es una interfaz preferida
+                        }
+                    }
+                }
+            }
+
+            // Fallback: intentar método estándar
+            InetAddress localHost = InetAddress.getLocalHost();
+            String ip = localHost.getHostAddress();
+
+            if (!ip.startsWith("127.") && !ip.startsWith("192.168.56.")) {
+                return ip;
+            }
+
+            // Último recurso
+            System.err.println("⚠️  No se detectó IP de red real. Usando localhost.");
+            System.err.println("💡 Conecta a WiFi o Ethernet para usar en red.");
+            return "localhost";
+
+        } catch (Exception e) {
+            System.err.println("⚠️  Error detectando IP, usando localhost");
+            e.printStackTrace();
+            return "localhost";
         }
     }
 }

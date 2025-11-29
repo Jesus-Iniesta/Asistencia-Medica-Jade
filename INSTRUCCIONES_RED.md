@@ -47,27 +47,42 @@ Busca la línea que dice **"Dirección IPv4"**, por ejemplo: `192.168.1.100`
 
 #### En Linux/macOS:
 ```bash
-ifconfig
-# o
 ip addr show
+# o
+ifconfig
 ```
-Busca la dirección IP en la interfaz activa (eth0, wlan0, etc.)
+Busca la dirección IP en la interfaz activa (wlan0, eth0, enp3s0, etc.)
 
 **Ejemplo de salida:**
 ```
-Dirección IPv4: 192.168.1.100
-Máscara de subred: 255.255.255.0
-Puerta de enlace: 192.168.1.1
+3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP>
+    inet 192.168.1.100/24 brd 192.168.1.255 scope global dynamic
 ```
 
-⚠️ **IMPORTANTE:** Anota esta IP, la necesitarás para configurar la computadora secundaria.
+⚠️ **IMPORTANTE:** 
+- **NO** uses IPs que empiecen con `127.` (localhost)
+- **NO** uses IPs que empiecen con `192.168.56.` (VirtualBox)
+- **NO** uses IPs que empiecen con `192.168.122.` (otras VMs)
+- Usa la IP de tu WiFi o Ethernet real
 
 ---
 
-### Paso 2: Configurar Firewall
+### Paso 2: Configurar Firewall (MUY IMPORTANTE)
+
+El error **"No existe ninguna ruta hasta el host"** generalmente se debe al firewall bloqueando las conexiones.
 
 #### Windows (Firewall de Windows Defender):
 
+**Opción 1: Permitir Java en el Firewall (Recomendado)**
+1. Abre **"Panel de Control" → "Sistema y seguridad" → "Firewall de Windows Defender"**
+2. Clic en **"Permitir una aplicación o una característica a través de Firewall de Windows Defender"**
+3. Clic en **"Cambiar configuración"**
+4. Clic en **"Permitir otra aplicación"**
+5. Busca y selecciona **`java.exe`** y **`javaw.exe`** (normalmente en `C:\Program Files\Java\jdk-17\bin\`)
+6. Marca todas las casillas (Privado y Público)
+7. Clic en **"Agregar"**
+
+**Opción 2: Crear Regla de Puerto**
 1. Abre **"Panel de Control" → "Sistema y seguridad" → "Firewall de Windows Defender"**
 2. Clic en **"Configuración avanzada"**
 3. Selecciona **"Reglas de entrada"**
@@ -80,9 +95,24 @@ Puerta de enlace: 192.168.1.1
 
 #### Linux (UFW):
 ```bash
+# Permitir puertos
 sudo ufw allow 1099/tcp
 sudo ufw allow 7070/tcp
 sudo ufw reload
+
+# Verificar reglas
+sudo ufw status
+```
+
+#### Linux (Fedora/CentOS/RHEL):
+```bash
+# Permitir puertos
+sudo firewall-cmd --permanent --add-port=1099/tcp
+sudo firewall-cmd --permanent --add-port=7070/tcp
+sudo firewall-cmd --reload
+
+# Verificar
+sudo firewall-cmd --list-ports
 ```
 
 #### macOS:
@@ -90,6 +120,37 @@ sudo ufw reload
 # Ir a Preferencias del Sistema → Seguridad y Privacidad → Firewall
 # Clic en "Opciones del Firewall"
 # Permitir conexiones entrantes para Java
+```
+
+---
+
+### Paso 3: Verificar Conectividad entre Computadoras
+
+Antes de continuar, **verifica que ambas computadoras pueden comunicarse**:
+
+#### Desde la Computadora Secundaria, ejecuta:
+
+```bash
+# Verificar que puedes hacer ping a la principal
+ping 192.168.1.100
+
+# Deberías ver:
+# 64 bytes from 192.168.1.100: icmp_seq=1 ttl=64 time=2.5 ms
+```
+
+Si el ping **NO funciona**:
+- ❌ Verifica que ambas estén en la misma red WiFi
+- ❌ Desactiva temporalmente el firewall para probar
+- ❌ Verifica que no haya aislamiento de clientes en el router
+
+Si el ping **SÍ funciona**, prueba la conectividad del puerto:
+
+```bash
+# Linux/macOS
+telnet 192.168.1.100 1099
+
+# Windows (PowerShell)
+Test-NetConnection -ComputerName 192.168.1.100 -Port 1099
 ```
 
 ---
@@ -113,27 +174,41 @@ Deberías ver:
 ### Paso 2: Iniciar MainContainer
 
 ```bash
-java -cp target/classes:lib/* com.medical.jade.launcher.MainContainer
+java -cp target/classes com.medical.jade.launcher.MainContainer
 ```
 
 **Salida esperada:**
 ```
 ===========================================
-🏥 SISTEMA MÉDICO - PLATAFORMA JADE
+🔍 DETECTANDO CONFIGURACIÓN DE RED...
 ===========================================
-✅ Plataforma JADE iniciada
-📍 Host: localhost
-📡 Puerto: 1099
+📍 IP detectada: 192.168.1.100
+
+===========================================
+🏥 COMPUTADORA PRINCIPAL - INICIADA
+===========================================
+📍 IP del Servidor: 192.168.1.100
+🔌 Puerto JADE: 1099
+🌐 Puerto Web: 7070
 ===========================================
 
-👨‍💼 Recepcionista iniciado: Recepcionista
-💉 Enfermero iniciado: Enfermero
-
-✅ Servicios registrados en Yellow Pages
+📋 INSTRUCCIONES PARA COMPUTADORA SECUNDARIA:
+   1. Abre RemoteContainer.java
+   2. Cambia la línea 26 a:
+      String mainHost = "192.168.1.100";
+   3. Ejecuta RemoteContainer
 ===========================================
+
+✅ AGENTES ACTIVOS EN COMPUTADORA PRINCIPAL:
+   1. Recepcionista - Registra citas
+   2. Enfermero - Toma signos vitales
+
+⏳ Esperando conexión de Computadora Secundaria (Doctor)...
 ```
 
-✅ **Verás una ventana gráfica de JADE con los agentes Recepcionista y Enfermero**
+⚠️ **COPIA LA IP QUE MUESTRA** (en este ejemplo: `192.168.1.100`)
+
+✅ **Verás una ventana gráfica de JADE con los agentes**
 
 ⚠️ **Mantén esta ventana abierta**
 
@@ -144,46 +219,24 @@ java -cp target/classes:lib/* com.medical.jade.launcher.MainContainer
 Abre una **nueva terminal** y ejecuta:
 
 ```bash
-java -cp target/classes:lib/* com.medical.jade.launcher.WebInterfaceServer
+java -cp target/classes com.medical.jade.launcher.WebInterfaceServer
 ```
 
 **Salida esperada:**
 ```
 ===========================================
-🔄 INICIANDO SERVIDOR WEB...
-===========================================
-🔌 Intentando conectar a plataforma JADE...
-✅ Conectado a plataforma JADE exitosamente
-📦 Contenedor: web-container
-
-===========================================
 🌐 INTERFAZ WEB - INICIADA
 ===========================================
-📍 URL: http://localhost:7070
-📄 Interfaz: http://localhost:7070/index.html
-🔌 API: http://localhost:7070/api
+📍 URL: http://192.168.1.100:7070
+📄 Interfaz: http://192.168.1.100:7070/index.html
+🔌 API: http://192.168.1.100:7070/api
 🔗 JADE: ✅ CONECTADO
-===========================================
-
-💡 INSTRUCCIONES:
-   1. Abre tu navegador
-   2. Ve a: http://localhost:7070/index.html
-   3. Llena el formulario de cita médica
-   4. Observa la comunicación entre agentes
 ===========================================
 ```
 
 ✅ **El servidor web está listo**
 
 ⚠️ **Mantén esta ventana abierta**
-
----
-
-### Paso 4: Verificar Conexión Web
-
-Abre tu navegador en: **http://localhost:7070/index.html**
-
-Deberías ver la interfaz del sistema médico.
 
 ---
 
@@ -200,32 +253,16 @@ Opciones:
 
 ### Paso 2: Configurar la IP del Servidor
 
-Abre el archivo: `src/main/java/com/medical/jade/launcher/RemoteContainer.java`
-
-**Busca estas líneas (aproximadamente línea 24):**
-
-```java
-// OPCIÓN A: Prueba en la MISMA computadora (desarrollo)
-String mainHost = "localhost";
-
-// OPCIÓN B: Otra computadora en la red
-// Descomentar y cambiar XXX por la IP real de la computadora principal
-// Ejemplo: String mainHost = "192.168.1.100";
-// String mainHost = "192.168.1.XXX";
-```
-
-**Modifica para usar la IP de tu computadora principal:**
-
-```java
-// OPCIÓN A: Prueba en la MISMA computadora (desarrollo)
-// String mainHost = "localhost";  // ← COMENTAR ESTA LÍNEA
-
-// OPCIÓN B: Otra computadora en la red
-// Descomentar y cambiar XXX por la IP real de la computadora principal
-String mainHost = "192.168.1.100";  // ← USAR TU IP AQUÍ
-```
-
-⚠️ **IMPORTANTE:** Reemplaza `192.168.1.100` con la IP que anotaste antes.
+1. Abre el archivo **`RemoteContainer.java`**
+2. Localiza la línea 26:
+   ```java
+   String mainHost = "172.26.49.144";
+   ```
+3. **Reemplázala** con la IP que te mostró MainContainer:
+   ```java
+   String mainHost = "192.168.1.100";  // IP de TU computadora principal
+   ```
+4. **Guarda el archivo**
 
 ---
 
@@ -238,10 +275,10 @@ mvn clean package
 
 ---
 
-### Paso 4: Iniciar RemoteContainer
+### Paso 4: Ejecutar RemoteContainer
 
 ```bash
-java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
+java -cp target/classes com.medical.jade.launcher.RemoteContainer
 ```
 
 **Salida esperada:**
@@ -249,8 +286,10 @@ java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
 ===========================================
 🔄 INICIANDO CONTENEDOR REMOTO...
 ===========================================
-🔌 Conectando a: 192.168.1.100:1099
-✅ Conectado exitosamente
+🔌 Intentando conectar a: 192.168.1.100:1099
+⏳ Esto puede tomar unos segundos...
+
+✅ Conexión establecida con el MainContainer
 ===========================================
 
 👨‍⚕️ Creando agente Doctor...
@@ -258,7 +297,7 @@ java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
 ===========================================
 ✅ CONTENEDOR REMOTO ACTIVO
 ===========================================
-📍 Host principal: 192.168.1.100
+📍 Conectado a: 192.168.1.100
 👨‍⚕️ Agente activo: Doctor
 ===========================================
 
@@ -268,351 +307,168 @@ java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
 ⚠️  Mantén esta ventana abierta para que el Doctor siga activo
 ```
 
-✅ **El Doctor se ha conectado exitosamente**
-
----
-
-### Verificación en la Computadora Principal
-
-En la **ventana de JADE** de la computadora principal, deberías ver:
-
-```
-📦 Nuevo contenedor conectado: remote-container
-👨‍⚕️ Nuevo agente: Doctor@remote-container
-```
-
-En la GUI de JADE, verás el agente **Doctor** en el contenedor **remote-container**.
+✅ **¡Conexión exitosa!** Ahora verás el agente **Doctor** en la ventana de JADE de la computadora principal.
 
 ---
 
 ## 🧪 Prueba del Sistema
 
-### Flujo de Prueba Completo
+### Desde cualquier dispositivo en la misma red:
 
-#### 1. En la Computadora Principal:
-
-Abre el navegador en: **http://localhost:7070/index.html**
-
-#### 2. Registra un Paciente:
-
-Llena el formulario:
-- **Nombre:** Juan Pérez
-- **Edad:** 35
-- **Género:** Masculino
-- **Síntomas:** Dolor de cabeza y fiebre
-
-Clic en **"Registrar y Continuar"**
-
-#### 3. Observa el Flujo:
-
-**En la terminal del MainContainer:**
-```
-📋 Cita recibida desde web
-👨‍💼 Recepcionista: Procesando solicitud de cita
-💉 Enfermero: Tomando signos vitales
-📤 Enviando caso médico al Doctor...
-```
-
-**En la terminal del RemoteContainer (Computadora Secundaria):**
-```
-👨‍⚕️ Doctor: Caso médico recibido
-🔍 Analizando síntomas: Dolor de cabeza y fiebre
-📊 Diagnóstico generado: Cefalea con síndrome febril
-💊 Tratamiento: Paracetamol 500mg cada 8 horas
-✅ Diagnóstico enviado
-```
-
-**En la terminal del WebServer:**
-```
-✅ Diagnóstico guardado para: P1732836000123
-```
-
-#### 4. Ver Diagnóstico:
-
-En el navegador, verás automáticamente:
-- ✅ Diagnóstico médico
-- 💊 Tratamiento prescrito
-- 📅 Próxima cita
-
-#### 5. Procesar Pago:
-
-Clic en **"Proceder al Pago"**
-Selecciona un método de pago
-Verás el recibo con folio
-
-#### 6. Ver Receta Médica:
-
-Clic en **"Ver Receta Médica"**
-Tendrás una receta completa con todos los datos
+1. Abre un navegador
+2. Ve a: **http://192.168.1.100:7070/index.html** (usa la IP de la computadora principal)
+3. Llena el formulario de cita médica
+4. Observa cómo los agentes se comunican entre las dos computadoras
 
 ---
 
-## 📊 Diagrama de Arquitectura en Red
+## 🔧 Solución de Problemas
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   COMPUTADORA PRINCIPAL                     │
-│                     (192.168.1.100)                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────────┐      ┌──────────────────────┐   │
-│  │   MainContainer      │      │   WebContainer       │   │
-│  │   Puerto: 1099       │◄─────┤   Puerto: 7070       │   │
-│  │                      │      │                      │   │
-│  │  👨‍💼 Recepcionista    │      │  🌐 Servidor Web     │   │
-│  │  💉 Enfermero        │      │  👤 Pacientes        │   │
-│  │                      │      │     (dinámicos)      │   │
-│  └──────────────────────┘      └──────────────────────┘   │
-│           ▲                              ▲                 │
-│           │                              │                 │
-└───────────┼──────────────────────────────┼─────────────────┘
-            │                              │
-            │ JADE Messages                │ HTTP
-            │ (Puerto 1099)                │ (Puerto 7070)
-            │                              │
-┌───────────┼──────────────────────────────┼─────────────────┐
-│           ▼                              │                 │
-│  ┌──────────────────────┐                │                 │
-│  │  RemoteContainer     │                │                 │
-│  │                      │                │                 │
-│  │  👨‍⚕️ Doctor           │                │                 │
-│  │                      │                │                 │
-│  └──────────────────────┘                │                 │
-│                                          ▼                 │
-│                    COMPUTADORA SECUNDARIA                  │
-│                      (192.168.1.XXX)                       │
-│                                                             │
-│              [Usuario accede desde navegador]              │
-│          http://192.168.1.100:7070/index.html              │
-└─────────────────────────────────────────────────────────────┘
-```
+### ❌ Error: "No existe ninguna ruta hasta el host"
 
----
-
-## 🔍 Solución de Problemas
-
-### ❌ Error: "No se pudo conectar a JADE"
-
-**Síntomas:**
-```
-❌ ERROR AL CONECTAR
-```
+**Causas comunes:**
+1. **Firewall bloqueando conexiones**
+2. **Computadoras en redes diferentes**
+3. **IP incorrecta**
+4. **VirtualBox/Docker interferiendo**
 
 **Soluciones:**
 
-1. **Verificar que MainContainer esté ejecutándose:**
-   ```bash
-   # En la computadora principal, debería haber una ventana de JADE abierta
-   ```
+#### 1. Verificar Firewall (Más común)
 
-2. **Verificar la IP:**
-   ```bash
-   # Asegúrate de que la IP en RemoteContainer.java sea correcta
-   ping 192.168.1.100  # Desde la computadora secundaria
-   ```
+**Windows:**
+```powershell
+# Desactivar temporalmente para probar
+netsh advfirewall set allprofiles state off
 
-3. **Verificar firewall:**
-   ```bash
-   # Windows
-   netstat -an | findstr 1099
-   
-   # Linux/Mac
-   netstat -an | grep 1099
-   ```
-   Deberías ver: `0.0.0.0:1099` o `*:1099`
+# Si funciona, el problema es el firewall
+# Vuelve a activarlo:
+netsh advfirewall set allprofiles state on
 
-4. **Probar conexión:**
-   ```bash
-   telnet 192.168.1.100 1099
-   ```
-   Si conecta, el puerto está abierto.
-
----
-
-### ❌ Error: "JADE no está conectado" (en el navegador)
-
-**Síntomas:**
-```json
-{
-  "status": "error",
-  "message": "JADE no está conectado..."
-}
+# Y agrega las reglas como se explicó arriba
 ```
 
-**Soluciones:**
-
-1. **Reiniciar en orden correcto:**
-   ```bash
-   # Detener todo (Ctrl+C en todas las terminales)
-   
-   # 1. MainContainer
-   java -cp target/classes:lib/* com.medical.jade.launcher.MainContainer
-   
-   # 2. WebInterfaceServer (esperar que JADE esté listo)
-   java -cp target/classes:lib/* com.medical.jade.launcher.WebInterfaceServer
-   
-   # 3. RemoteContainer
-   java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
-   ```
-
-2. **Verificar logs:**
-   En la terminal del WebInterfaceServer debería decir:
-   ```
-   🔗 JADE: ✅ CONECTADO
-   ```
-
----
-
-### ❌ Error: "Cannot reach the remote container"
-
-**Síntomas:**
-La computadora secundaria no puede conectarse a la principal.
-
-**Soluciones:**
-
-1. **Verificar red:**
-   ```bash
-   ping 192.168.1.100
-   ```
-
-2. **Desactivar firewall temporalmente** (solo para prueba):
-   ```bash
-   # Windows
-   netsh advfirewall set allprofiles state off
-   
-   # Linux
-   sudo ufw disable
-   ```
-
-3. **Usar IP estática:**
-   Configura una IP fija en la computadora principal para evitar cambios.
-
----
-
-### ❌ No aparece el Doctor en JADE GUI
-
-**Soluciones:**
-
-1. **Refrescar JADE GUI:**
-   - Clic derecho en el árbol de agentes
-   - Selecciona "Refresh"
-
-2. **Verificar logs del RemoteContainer:**
-   Debe decir: `✅ CONTENEDOR REMOTO ACTIVO`
-
-3. **Reiniciar RemoteContainer:**
-   Presiona `Ctrl+C` y vuelve a ejecutar.
-
----
-
-### ❌ "Address already in use" (Puerto ocupado)
-
-**Síntomas:**
-```
-java.net.BindException: Address already in use
-```
-
-**Soluciones:**
-
-1. **Buscar proceso usando el puerto:**
-   ```bash
-   # Windows
-   netstat -ano | findstr :7070
-   taskkill /PID [número] /F
-   
-   # Linux/Mac
-   lsof -i :7070
-   kill -9 [PID]
-   ```
-
-2. **Esperar un momento:**
-   A veces el puerto tarda en liberarse (30 segundos).
-
----
-
-## 📱 Acceso desde Otras Computadoras
-
-Cualquier dispositivo en la red puede acceder a la interfaz web:
-
-```
-http://192.168.1.100:7070/index.html
-```
-
-Esto permite:
-- 📱 Teléfonos móviles
-- 💻 Laptops adicionales
-- 🖥️ Otras computadoras de escritorio
-
-**Ejemplo:**
-```
-Computadora Principal: 192.168.1.100
-   - MainContainer
-   - WebInterfaceServer
-
-Computadora 2: 192.168.1.101
-   - RemoteContainer (Doctor)
-
-Computadora 3: 192.168.1.102
-   - Solo navegador web
-
-Tablet: 192.168.1.103
-   - Solo navegador web
-```
-
----
-
-## 📋 Checklist de Verificación
-
-Antes de reportar un problema, verifica:
-
-- [ ] Ambas computadoras tienen Java 17+
-- [ ] Ambas computadoras están en la misma red
-- [ ] La IP de la computadora principal es correcta
-- [ ] El firewall permite los puertos 1099 y 7070
-- [ ] MainContainer se inició primero
-- [ ] WebInterfaceServer dice "JADE: ✅ CONECTADO"
-- [ ] RemoteContainer se conectó exitosamente
-- [ ] La GUI de JADE muestra todos los agentes
-
----
-
-## 🎯 Resumen Rápido
-
-### Computadora Principal (Servidor):
+**Linux:**
 ```bash
-# Terminal 1
-java -cp target/classes:lib/* com.medical.jade.launcher.MainContainer
+# Verificar estado del firewall
+sudo ufw status
 
-# Terminal 2
-java -cp target/classes:lib/* com.medical.jade.launcher.WebInterfaceServer
+# Desactivar temporalmente para probar
+sudo ufw disable
+
+# Si funciona, vuelve a activar y agrega reglas
+sudo ufw enable
+sudo ufw allow 1099/tcp
+sudo ufw allow 7070/tcp
 ```
 
-### Computadora Secundaria (Cliente):
+#### 2. Verificar que están en la misma red
+
+Ambas computadoras deben tener IPs en el mismo rango:
+- ✅ Computadora 1: `192.168.1.100`
+- ✅ Computadora 2: `192.168.1.101`
+- ❌ Computadora 1: `192.168.1.100`
+- ❌ Computadora 2: `10.0.0.5` (red diferente)
+
+#### 3. Verificar conectividad básica
+
 ```bash
-# Editar RemoteContainer.java con la IP correcta
-# Compilar: mvn clean package
+# Desde la computadora secundaria
+ping 192.168.1.100
 
-# Terminal 1
-java -cp target/classes:lib/* com.medical.jade.launcher.RemoteContainer
+# Si el ping falla:
+# - Verifica la IP con ipconfig/ifconfig
+# - Conecta ambas a la misma red WiFi
+# - Desactiva "Aislamiento de cliente" en el router
 ```
 
-### Navegador (Cualquier dispositivo):
+#### 4. VirtualBox/Docker interferiendo
+
+Si tienes VirtualBox o Docker, pueden crear interfaces de red que interfieren:
+
+```bash
+# Linux: Ver todas las interfaces
+ip addr show
+
+# Desactivar interfaces virtuales temporalmente
+sudo ifconfig vboxnet0 down
+sudo ifconfig docker0 down
 ```
-http://192.168.1.100:7070/index.html
+
+El código actualizado en **MainContainer.java** ya filtra automáticamente estas interfaces.
+
+---
+
+### ❌ Error: "Connection refused"
+
+**Causa:** MainContainer no está ejecutándose.
+
+**Solución:** Asegúrate de que MainContainer esté corriendo en la computadora principal ANTES de ejecutar RemoteContainer.
+
+---
+
+### ❌ Error: Agente Doctor no aparece en JADE GUI
+
+**Causa:** RemoteContainer no se conectó correctamente.
+
+**Solución:**
+1. Revisa la salida de RemoteContainer
+2. Verifica que diga "✅ Conexión establecida"
+3. En la GUI de JADE, ve a **Tools → Remote Agent Management**
+4. Deberías ver el contenedor "remote-container"
+
+---
+
+### 🔍 Diagnóstico Avanzado
+
+Si nada funciona, ejecuta estos comandos:
+
+**En la Computadora Principal:**
+```bash
+# Verificar que Java está escuchando en el puerto 1099
+netstat -an | grep 1099
+
+# Deberías ver algo como:
+# tcp        0      0 0.0.0.0:1099            0.0.0.0:*               LISTEN
+```
+
+**En la Computadora Secundaria:**
+```bash
+# Verificar conectividad al puerto
+telnet 192.168.1.100 1099
+
+# Si se conecta, verás:
+# Trying 192.168.1.100...
+# Connected to 192.168.1.100.
 ```
 
 ---
 
-## 📞 Soporte Adicional
+## 📱 Acceso desde Dispositivos Móviles
 
-Si sigues teniendo problemas:
+Una vez que el sistema esté funcionando, puedes acceder desde tu celular o tablet:
 
-1. Revisa los logs completos de cada terminal
-2. Verifica la conectividad de red con `ping`
-3. Prueba primero en `localhost` antes de red
-4. Consulta la documentación de JADE: https://jade.tilab.com/
+1. Conecta tu dispositivo móvil a la **misma red WiFi**
+2. Abre el navegador móvil
+3. Ve a: **http://192.168.1.100:7070/index.html**
+4. ¡Listo! Puedes usar el sistema desde tu celular
 
 ---
 
-¡Sistema listo para funcionar en red distribuida! 🎉
+## 💡 Consejos Adicionales
 
+- 🔒 **Seguridad:** Este sistema NO debe exponerse a Internet sin medidas de seguridad adicionales
+- 📡 **Rendimiento:** Usar cable Ethernet en lugar de WiFi mejora la estabilidad
+- 💾 **Backup:** Haz copias de seguridad de los datos de las citas
+- 🔄 **Actualizaciones:** Mantén Java actualizado en ambas computadoras
+
+---
+
+## 📞 Soporte
+
+Si sigues teniendo problemas después de seguir todos estos pasos:
+
+1. Verifica que tienes Java 17 o superior: `java -version`
+2. Compila el proyecto limpiamente: `mvn clean package`
+3. Revisa los logs de errores completos
+4. Verifica que no haya otros programas usando el puerto 1099
