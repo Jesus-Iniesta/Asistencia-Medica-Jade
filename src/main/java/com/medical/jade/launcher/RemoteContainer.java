@@ -11,31 +11,33 @@ import jade.wrapper.ContainerController;
  * Este contenedor ejecuta el agente Doctor
  *
  * INSTRUCCIONES RÁPIDAS:
- * 1. Edita la variable 'mainHost' con la IP de la computadora principal
- * 2. Ejecuta este archivo
- * 3. El Doctor se conectará automáticamente al sistema
+ * 1. Ejecuta MainContainer.java en la COMPUTADORA PRINCIPAL primero
+ * 2. Copia la IP que muestra MainContainer
+ * 3. Pégala en la variable 'mainHost' abajo (línea 26)
+ * 4. Ejecuta este archivo
+ * 5. El Doctor se conectará automáticamente
  */
 public class RemoteContainer {
     public static void main(String[] args) {
         try {
             // ========================================
-            // 🔧 CONFIGURACIÓN - Edita solo esta línea
+            // 🔧 CONFIGURACIÓN - Edita SOLO esta línea
             // ========================================
 
-            // OPCIÓN A: Prueba en la MISMA computadora (desarrollo)
-            String mainHost = "localhost";
+            // ⬇️ PEGA AQUÍ LA IP QUE MUESTRA MainContainer
+            String mainHost = "172.26.49.144";
 
-            // OPCIÓN B: Otra computadora en la red
-            // Descomentar y cambiar XXX por la IP real de la computadora principal
-            // Ejemplo: String mainHost = "192.168.1.100";
-            // String mainHost = "192.168.1.XXX";
+            // Ejemplos:
+            // String mainHost = "192.168.1.100";  // IP de la computadora principal
+            // String mainHost = "10.0.0.5";       // Otra IP posible
 
             // ========================================
 
             System.out.println("\n===========================================");
             System.out.println("🔄 INICIANDO CONTENEDOR REMOTO...");
             System.out.println("===========================================");
-            System.out.println("🔌 Conectando a: " + mainHost + ":1099");
+            System.out.println("🔌 Intentando conectar a: " + mainHost + ":1099");
+            System.out.println("⏳ Esto puede tomar unos segundos...\n");
 
             // Configuración del contenedor remoto
             Runtime rt = Runtime.instance();
@@ -47,7 +49,7 @@ public class RemoteContainer {
             // Crear contenedor remoto
             ContainerController remoteContainer = rt.createAgentContainer(profile);
 
-            System.out.println("✅ Conectado exitosamente");
+            System.out.println("✅ Conexión establecida con el MainContainer");
             System.out.println("===========================================\n");
 
             // Crear agente Doctor
@@ -63,7 +65,7 @@ public class RemoteContainer {
             System.out.println("\n===========================================");
             System.out.println("✅ CONTENEDOR REMOTO ACTIVO");
             System.out.println("===========================================");
-            System.out.println("📍 Host principal: " + mainHost);
+            System.out.println("📍 Conectado a: " + mainHost);
             System.out.println("👨‍⚕️ Agente activo: Doctor");
             System.out.println("===========================================");
             System.out.println("\n💡 El Doctor está listo para atender pacientes");
@@ -72,17 +74,27 @@ public class RemoteContainer {
 
         } catch (Exception e) {
             System.err.println("\n===========================================");
-            System.err.println("❌ ERROR AL CONECTAR");
+            System.err.println("❌ ERROR AL CONECTAR CON LA COMPUTADORA PRINCIPAL");
             System.err.println("===========================================");
             System.err.println("\n📝 CHECKLIST DE SOLUCIÓN:");
-            System.err.println("   □ MainContainer está ejecutándose en la computadora principal");
-            System.err.println("   □ La IP en 'mainHost' es correcta");
-            System.err.println("   □ El puerto 1099 está abierto en el firewall");
-            System.err.println("   □ Ambas computadoras están en la misma red");
-            System.err.println("\n💡 TIP: Para pruebas locales, usa mainHost = \"localhost\"");
+            System.err.println("   ❌ Verifica que MainContainer esté ejecutándose primero");
+            System.err.println("   ❌ Asegúrate de copiar la IP CORRECTA que muestra MainContainer");
+            System.err.println("   ❌ Verifica que ambas computadoras estén en la MISMA RED");
+            System.err.println("   ❌ Verifica que el firewall permita el puerto 1099");
+            System.err.println("\n🔥 SOLUCIÓN COMÚN DE FIREWALL:");
+            System.err.println("   Windows:");
+            System.err.println("      Panel de Control > Firewall > Permitir aplicación");
+            System.err.println("      Agregar Java/javaw.exe a la lista");
+            System.err.println("\n   Linux:");
+            System.err.println("      sudo ufw allow 1099/tcp");
+            System.err.println("      sudo firewall-cmd --add-port=1099/tcp (Fedora/CentOS)");
+            System.err.println("\n🌐 VERIFICAR CONECTIVIDAD:");
+            System.err.println("   Desde esta computadora, ejecuta:");
+            System.err.println("      ping [IP_DE_COMPUTADORA_PRINCIPAL]");
+            System.err.println("      telnet [IP_DE_COMPUTADORA_PRINCIPAL] 1099");
             System.err.println("===========================================\n");
 
-            System.err.println("Detalles del error:");
+            System.err.println("Detalles técnicos del error:");
             e.printStackTrace();
         }
     }
