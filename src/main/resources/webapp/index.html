@@ -13,34 +13,216 @@
         <p>Sistema distribuido con agentes inteligentes</p>
     </header>
 
-    <div class="card">
-        <h2>📋 Nueva Consulta Médica</h2>
-        <form id="citaForm">
+    <!-- PASO 0: Botón inicial -->
+    <div id="step-inicio" class="card">
+        <h2>👋 Bienvenido al Sistema Médico</h2>
+        <p style="color: #6b7280; margin-bottom: 24px; line-height: 1.6;">
+            Para comenzar tu consulta médica, presiona el botón a continuación para pasar a recepción.
+        </p>
+        <button id="btnPasarRecepcion" class="btn-primary">
+            📋 Pasar a Recepción
+        </button>
+    </div>
+
+    <!-- PASO 1: Registro en recepción -->
+    <div id="step-recepcion" class="card" style="display: none;">
+        <h2>📋 Registro en Recepción</h2>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            Por favor, proporciona tus datos personales para el registro
+        </p>
+        <form id="recepcionForm">
             <div class="form-group">
-                <label>Nombre Completo</label>
+                <label>Nombre Completo *</label>
                 <input type="text" id="nombre" placeholder="Ej: Juan Pérez García" required>
             </div>
 
             <div class="form-group">
-                <label>Síntomas</label>
+                <label>Edad *</label>
+                <input type="number" id="edad" placeholder="Ej: 30" min="1" max="120" required>
+            </div>
+
+            <div class="form-group">
+                <label>Género *</label>
+                <select id="genero" required>
+                    <option value="">Selecciona...</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Otro">Otro</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Síntomas Principales *</label>
                 <textarea id="sintomas" rows="4" placeholder="Describe tus síntomas aquí..." required></textarea>
             </div>
 
-            <button type="submit" class="btn-primary">Solicitar Consulta Médica</button>
+            <button type="submit" class="btn-primary">
+                ✅ Registrar y Continuar
+            </button>
         </form>
     </div>
 
-    <div class="card">
-        <h2>📊 Progreso de la Consulta</h2>
-        <div id="estado" class="status-box">
-            <p>Esperando solicitud...</p>
+    <!-- PASO 2: Signos vitales con enfermero -->
+    <div id="step-enfermero" class="card" style="display: none;">
+        <h2>💉 Toma de Signos Vitales - Enfermero</h2>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            El enfermero está registrando tus signos vitales...
+        </p>
+
+        <div id="signos-vitales" class="signos-container">
+            <div class="signo-item">
+                <div class="signo-icon">🌡️</div>
+                <div class="signo-info">
+                    <h4>Temperatura</h4>
+                    <p id="valor-temperatura" class="signo-valor">--</p>
+                    <div class="progress-bar">
+                        <div id="progress-temperatura" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signo-item">
+                <div class="signo-icon">📏</div>
+                <div class="signo-info">
+                    <h4>Altura</h4>
+                    <p id="valor-altura" class="signo-valor">--</p>
+                    <div class="progress-bar">
+                        <div id="progress-altura" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signo-item">
+                <div class="signo-icon">❤️</div>
+                <div class="signo-info">
+                    <h4>Ritmo Cardíaco</h4>
+                    <p id="valor-ritmo" class="signo-valor">--</p>
+                    <div class="progress-bar">
+                        <div id="progress-ritmo" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signo-item">
+                <div class="signo-icon">🩺</div>
+                <div class="signo-info">
+                    <h4>Presión Arterial</h4>
+                    <p id="valor-presion" class="signo-valor">--</p>
+                    <div class="progress-bar">
+                        <div id="progress-presion" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-enfermero" class="status-message" style="margin-top: 20px;">
+            <div class="loading"></div>
+            <span>Tomando mediciones...</span>
         </div>
     </div>
 
-    <div class="card">
+    <!-- PASO 3: Consulta con el doctor -->
+    <div id="step-doctor" class="card" style="display: none;">
+        <h2>👨‍⚕️ Consulta Médica</h2>
+        <div id="estado" class="status-box">
+            <p>El doctor está revisando tu caso...</p>
+        </div>
+    </div>
+
+    <!-- PASO 4: Resultado del diagnóstico -->
+    <div id="step-diagnostico" class="card" style="display: none;">
         <h2>🩺 Resultado del Diagnóstico</h2>
         <div id="diagnostico" class="diagnostico-box">
-            <p>El diagnóstico aparecerá aquí una vez completada la consulta</p>
+            <!-- El diagnóstico se mostrará aquí -->
+        </div>
+
+        <button id="btnProcederCobro" class="btn-primary" style="margin-top: 20px; display: none;">
+            💳 Proceder al Pago
+        </button>
+    </div>
+
+    <!-- PASO 5: Cobro final -->
+    <div id="step-cobro" class="card" style="display: none;">
+        <h2>💰 Pago de Consulta</h2>
+        <div style="background: linear-gradient(135deg, #8b5cf615, #ffffff);
+                    border-left: 4px solid #8b5cf6;
+                    padding: 16px;
+                    border-radius: 8px;
+                    margin-bottom: 24px;">
+            <p style="margin: 0; color: #7c3aed; font-weight: 600; font-size: 1.05em;">
+                👨‍💼 Recepcionista: Procesando tu pago...
+            </p>
+        </div>
+
+        <div class="resumen-cobro">
+            <h3>📋 Resumen de la Consulta</h3>
+            <div class="cobro-item">
+                <span>Paciente:</span>
+                <span id="cobro-nombre" class="cobro-valor">--</span>
+            </div>
+            <div class="cobro-item">
+                <span>Consulta médica:</span>
+                <span class="cobro-valor">$500.00</span>
+            </div>
+            <div class="cobro-item">
+                <span>Signos vitales:</span>
+                <span class="cobro-valor">$200.00</span>
+            </div>
+            <div class="cobro-item total">
+                <span>Total a pagar:</span>
+                <span class="cobro-valor">$700.00</span>
+            </div>
+        </div>
+
+        <div class="metodo-pago" style="margin-top: 30px;">
+            <h4>Método de Pago</h4>
+            <div class="pago-opciones">
+                <button class="btn-pago" data-metodo="efectivo">
+                    💵 Efectivo
+                </button>
+                <button class="btn-pago" data-metodo="tarjeta">
+                    💳 Tarjeta
+                </button>
+                <button class="btn-pago" data-metodo="transferencia">
+                    🏦 Transferencia
+                </button>
+            </div>
+        </div>
+
+        <div id="recibo-pago" style="display: none; margin-top: 30px;">
+            <div class="recibo-completo">
+                <div class="recibo-header">
+                    <h3>✅ Pago Completado</h3>
+                    <p>Gracias por tu pago</p>
+                </div>
+                <div class="recibo-info">
+                    <p><strong>Método:</strong> <span id="metodo-seleccionado">--</span></p>
+                    <p><strong>Fecha:</strong> <span id="fecha-pago">--</span></p>
+                    <p><strong>Folio:</strong> <span id="folio-pago">--</span></p>
+                </div>
+                <button id="btnVerReceta" class="btn-primary" style="margin-bottom: 10px;">
+                    📄 Ver Receta Médica
+                </button>
+                <button id="btnNuevaConsulta" class="btn-primary">
+                    🔄 Nueva Consulta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASO 6: Receta Médica -->
+    <div id="step-receta" class="card" style="display: none;">
+        <div class="receta-medica" id="receta-container">
+            <!-- La receta se generará dinámicamente -->
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: center;">
+            <button id="btnImprimirReceta" class="btn-secondary">
+                🖨️ Imprimir Receta
+            </button>
+            <button id="btnVolverInicio" class="btn-primary">
+                🏠 Volver al Inicio
+            </button>
         </div>
     </div>
 </div>

@@ -459,19 +459,26 @@ public class DoctorAgent extends Agent {
         // === SEGUIMIENTO CORTO (1 SEMANA) ===
         if (diagnostico.contains("Intoxicación") || diagnostico.contains("Gastroenteritis") ||
             diagnostico.contains("Bronquitis") || diagnostico.contains("Infección") ||
-            diagnostico.contains("Diarrea infecciosa")) {
+            diagnostico.contains("Diarrea infecciosa") || diagnostico.contains("Faringoamigdalitis")) {
             return "En 1 semana para verificar evolución";
         }
 
         // === SEGUIMIENTO MEDIO (2-3 SEMANAS) ===
         if (diagnostico.contains("Hipertensión") || diagnostico.contains("Migraña") ||
-            diagnostico.contains("Gastritis") || diagnostico.contains("Faringoamigdalitis")) {
+            diagnostico.contains("Gastritis") || diagnostico.contains("Dolor abdominal") ||
+            diagnostico.contains("dolor torácico") || diagnostico.contains("Taquicardia")) {
             return "En 2 semanas para control y ajuste de tratamiento";
         }
 
         // === SEGUIMIENTO MEDIO (1 MES) ===
-        if (diagnostico.contains("Cefalea intensa") || diagnostico.contains("Taquicardia") ||
-            diagnostico.contains("Erupción") || diagnostico.contains("Astenia")) {
+        if (diagnostico.contains("Cefalea") || diagnostico.contains("Diarrea") ||
+            diagnostico.contains("Erupción") || diagnostico.contains("Astenia") ||
+            diagnostico.contains("Dispepsia") || diagnostico.contains("emético") ||
+            diagnostico.contains("Tos") || diagnostico.contains("Faringitis") ||
+            diagnostico.contains("Rinitis") || diagnostico.contains("Mialgia") ||
+            diagnostico.contains("Artralgia") || diagnostico.contains("vertiginoso") ||
+            diagnostico.contains("Hipotensión") || diagnostico.contains("Estreñimiento") ||
+            diagnostico.contains("febril")) {
             return "En 1 mes para evaluación de respuesta al tratamiento";
         }
 
