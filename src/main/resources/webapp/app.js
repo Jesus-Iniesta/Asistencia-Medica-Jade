@@ -64,9 +64,19 @@ async function manejarRegistroPaciente(e) {
 
     setPacienteData(pacienteData);
 
-    showStep('enfermero');
-    await procesarSignosVitales();
-    await procesarCita();
+    try {
+        showStep('enfermero');
+        await procesarSignosVitales();
+        await procesarCita();
+    } catch (error) {
+        console.error('❌ Error en el proceso:', error);
+
+        // Mostrar mensaje de error al usuario
+        alert(`⚠️ Error en el proceso:\n\n${error.message}\n\nAsegúrate de que:\n1. El servidor está ejecutándose\n2. Estás conectado a la misma red\n3. El firewall permite la conexión`);
+
+        // Volver al inicio
+        showStep('inicio');
+    }
 }
 
 function reiniciarAplicacion() {
@@ -75,4 +85,3 @@ function reiniciarAplicacion() {
     resetFormularioCobro();
     showStep('inicio');
 }
-
