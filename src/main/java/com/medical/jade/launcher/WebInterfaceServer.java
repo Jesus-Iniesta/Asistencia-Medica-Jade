@@ -10,21 +10,28 @@ import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
+import jade.wrapper.StaleProxyException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WebInterfaceServer - Servidor web que se conecta a JADE
- * Se usa DESPUÉS de iniciar MainContainer
+ * ⚠️ IMPORTANTE: Ejecuta MainContainer ANTES de este servidor
  */
 public class WebInterfaceServer {
     private static final Gson gson = new Gson();
     private static final Map<String, Diagnostico> diagnosticosCache = new ConcurrentHashMap<>();
     private static ContainerController container;
+    private static boolean jadeConnected = false;
 
     public static void main(String[] args) {
+        System.out.println("\n===========================================");
+        System.out.println("🔄 INICIANDO SERVIDOR WEB...");
+        System.out.println("===========================================\n");
+
+        // Intentar conectar a JADE
         try {
-            // Conectar a JADE existente
+            System.out.println("🔌 Intentando conectar a plataforma JADE...");
             Runtime rt = Runtime.instance();
             Profile profile = new ProfileImpl();
             profile.setParameter(Profile.MAIN_HOST, "localhost");
@@ -33,15 +40,29 @@ public class WebInterfaceServer {
 
             container = rt.createAgentContainer(profile);
 
-            System.out.println("✅ Conectado a plataforma JADE");
+            // Verificar que el contenedor está funcional
+            if (container != null) {
+                // Intentar obtener el nombre del contenedor para verificar conexión
+                String containerName = container.getContainerName();
+                jadeConnected = true;
+                System.out.println("✅ Conectado a plataforma JADE exitosamente");
+                System.out.println("📦 Contenedor: " + containerName);
+            }
 
         } catch (Exception e) {
-            System.err.println("❌ Error conectando a JADE. Asegúrate de que MainContainer esté ejecutándose.");
-            e.printStackTrace();
-            return;
+            jadeConnected = false;
+            System.err.println("\n❌ ERROR: No se pudo conectar a JADE");
+            System.err.println("===========================================");
+            System.err.println("⚠️  SOLUCIÓN:");
+            System.err.println("   1. Primero ejecuta: MainContainer.java");
+            System.err.println("   2. Espera a que aparezca la ventana de JADE");
+            System.err.println("   3. Luego ejecuta: WebInterfaceServer.java");
+            System.err.println("===========================================");
+            System.err.println("Detalles del error: " + e.getMessage());
+            System.err.println("\n⚠️  El servidor web se iniciará pero las funciones de JADE estarán deshabilitadas.\n");
         }
 
-        // Servidor web
+        // Servidor web (se inicia siempre, aunque JADE no esté disponible)
         Javalin app = Javalin.create(config -> {
             config.staticFiles.add("/webapp", Location.CLASSPATH);
             config.plugins.enableCors(cors -> {
@@ -55,12 +76,20 @@ public class WebInterfaceServer {
         System.out.println("📍 URL: http://localhost:7070");
         System.out.println("📄 Interfaz: http://localhost:7070/index.html");
         System.out.println("🔌 API: http://localhost:7070/api");
+        System.out.println("🔗 JADE: " + (jadeConnected ? "✅ CONECTADO" : "❌ DESCONECTADO"));
         System.out.println("===========================================");
-        System.out.println("\n💡 INSTRUCCIONES:");
-        System.out.println("   1. Abre tu navegador");
-        System.out.println("   2. Ve a: http://localhost:7070/index.html");
-        System.out.println("   3. Llena el formulario de cita médica");
-        System.out.println("   4. Observa la comunicación entre agentes");
+
+        if (jadeConnected) {
+            System.out.println("\n💡 INSTRUCCIONES:");
+            System.out.println("   1. Abre tu navegador");
+            System.out.println("   2. Ve a: http://localhost:7070/index.html");
+            System.out.println("   3. Llena el formulario de cita médica");
+            System.out.println("   4. Observa la comunicación entre agentes");
+        } else {
+            System.out.println("\n⚠️  ADVERTENCIA:");
+            System.out.println("   El servidor web está corriendo pero JADE no está conectado.");
+            System.out.println("   Reinicia MainContainer y luego este servidor.");
+        }
         System.out.println("===========================================\n");
 
         // API endpoints
@@ -72,7 +101,7 @@ public class WebInterfaceServer {
             String jsonResponse = gson.toJson(Map.of(
                 "status", "ok",
                 "server", "running",
-                "jadeConnected", container != null,
+                "jadeConnected", jadeConnected,
                 "diagnosticos", diagnosticosCache.size()
             ));
             ctx.contentType("application/json").result(jsonResponse);
@@ -80,6 +109,16 @@ public class WebInterfaceServer {
 
         // Endpoint para recibir citas y crear agente paciente
         app.post("/api/cita", ctx -> {
+            // Verificar conexión JADE
+            if (!jadeConnected || container == null) {
+                String errorResponse = gson.toJson(Map.of(
+                    "status", "error",
+                    "message", "⚠️ JADE no está conectado. Por favor, inicia MainContainer primero y reinicia este servidor."
+                ));
+                ctx.status(503).contentType("application/json").result(errorResponse);
+                return;
+            }
+
             try {
                 String body = ctx.body();
                 Cita cita = gson.fromJson(body, Cita.class);
@@ -100,7 +139,7 @@ public class WebInterfaceServer {
 
                 System.out.println("✅ Agente " + pacienteNombre + " creado y enviando solicitud");
 
-                // 🔥 CORREGIDO: Crear diagnóstico inicial en lugar de null
+                // Crear diagnóstico inicial
                 Diagnostico diagnosticoInicial = new Diagnostico();
                 diagnosticoInicial.setPacienteId(cita.getPacienteId());
                 diagnosticoInicial.setDiagnostico("En proceso...");
@@ -116,7 +155,16 @@ public class WebInterfaceServer {
 
                 ctx.contentType("application/json").result(jsonResponse);
 
+            } catch (StaleProxyException e) {
+                System.err.println("❌ Error: El contenedor JADE no está disponible");
+                e.printStackTrace();
+                String errorResponse = gson.toJson(Map.of(
+                    "status", "error",
+                    "message", "El contenedor JADE no está disponible. Por favor, reinicia MainContainer y luego este servidor."
+                ));
+                ctx.status(500).contentType("application/json").result(errorResponse);
             } catch (Exception e) {
+                System.err.println("❌ Error al crear agente paciente");
                 e.printStackTrace();
                 String errorResponse = gson.toJson(Map.of(
                     "status", "error",
