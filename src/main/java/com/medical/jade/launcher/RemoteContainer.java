@@ -29,7 +29,7 @@ public class RemoteContainer {
             // ========================================
 
             // ⬇️ PEGA AQUÍ LA IP QUE MUESTRA MainContainer (usa ipconfig/ifconfig si es distinto)
-            String mainHost = "10.211.172.68"; // ← Reemplaza con la IP real de la computadora principal
+            String mainHost = "192.168.56.1"; // ← Reemplaza con la IP real de la computadora principal
             int bridgePort = Integer.parseInt(System.getProperty(
                     "bridge.port",
                     String.valueOf(NetworkBridgeAgent.DEFAULT_PORT)));

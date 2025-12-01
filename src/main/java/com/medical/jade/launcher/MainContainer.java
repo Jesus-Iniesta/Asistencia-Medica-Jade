@@ -19,7 +19,7 @@ public class MainContainer {
 
             // Obtener la IP local REAL (evitando VirtualBox y loopback)
             // Usa -Dmain.host=IP_REAL si deseas forzar manualmente la IP detectada
-            String configuredHost = System.getProperty("main.host");
+            String configuredHost = "192.168.137.1";
             String localIP = configuredHost != null && !configuredHost.isBlank()
                     ? configuredHost.trim()
                     : detectPreferredLocalIP();
