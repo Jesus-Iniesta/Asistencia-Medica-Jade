@@ -39,7 +39,7 @@ El sistema implementa una arquitectura distribuida basada en agentes JADE (Java 
            ──────────── TCP Socket 6200 ─────────
 ```
 
-**Puente TCP entre plataformas:** `NetworkBridgeAgent` crea un túnel bidireccional mediante sockets puros (modo `SERVER` en la computadora principal y `CLIENT` en la remota). Los mensajes JADE que deban viajar entre plataformas se encapsulan en `RemoteMessageEnvelope`, se serializan a JSON (Gson) y se envían por el puerto configurable (6200 por defecto, sobreescribible con `-Dbridge.port=PUERTO`). Este puente evita depender de RMI y mantiene la interoperabilidad incluso si las plataformas están separadas por firewalls más restrictivos.
+**Puente TCP entre plataformas:** `NetworkBridgeAgent` crea un túnel bidireccional mediante sockets puros (modo `SERVER` en la computadora principal y `CLIENT` en la remota). Los mensajes JADE que deban viajar entre plataformas se encapsulan en `RemoteMessageEnvelope`, se serializan a JSON (Gson) y se envían por el puerto configurable (6200 por defecto, sobreescribible con `-Dbridge.port=PUERTO`). Este puente evita depender de RMI y mantiene la interoperabilidad incluso si las plataformas están separadas por firewalls más restrictivos. Si tu máquina tiene adaptadores virtuales (VirtualBox, Docker), fuerza la IP real con `-Dmain.host=IP_REAL` o verifica manualmente con `ipconfig/ifconfig` antes de ejecutar.
 
 ---
 

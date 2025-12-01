@@ -18,7 +18,11 @@ public class MainContainer {
             Profile profile = new ProfileImpl();
 
             // Obtener la IP local REAL (evitando VirtualBox y loopback)
-            String localIP = getRealLocalIP();
+            // Usa -Dmain.host=IP_REAL si deseas forzar manualmente la IP detectada
+            String configuredHost = System.getProperty("main.host");
+            String localIP = configuredHost != null && !configuredHost.isBlank()
+                    ? configuredHost.trim()
+                    : detectPreferredLocalIP();
             int bridgePort = Integer.parseInt(System.getProperty(
                     "bridge.port",
                     String.valueOf(NetworkBridgeAgent.DEFAULT_PORT)));
@@ -99,45 +103,49 @@ public class MainContainer {
     /**
      * Obtiene la IP local real, evitando direcciones loopback y VirtualBox
      */
-    private static String getRealLocalIP() {
+    private static String detectPreferredLocalIP() {
         try {
             Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+            String bestCandidate = null;
+            int bestScore = -1;
 
             while (networkInterfaces.hasMoreElements()) {
                 NetworkInterface ni = networkInterfaces.nextElement();
 
-                // Saltar interfaces loopback, no activas, y VirtualBox
-                if (ni.isLoopback() || !ni.isUp() || ni.getDisplayName().toLowerCase().contains("virtual")) {
+                if (!ni.isUp() || ni.isLoopback() || looksVirtual(ni)) {
                     continue;
                 }
-
-                // Preferir interfaces WiFi o Ethernet
-                String niName = ni.getName().toLowerCase();
-                boolean isPreferred = niName.startsWith("wlan") ||
-                                     niName.startsWith("eth") ||
-                                     niName.startsWith("en") ||
-                                     niName.startsWith("wlp");
 
                 Enumeration<InetAddress> addresses = ni.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress addr = addresses.nextElement();
-
-                    // Buscar IPv4 que NO sea loopback ni VirtualBox
                     String hostAddress = addr.getHostAddress();
-                    if (!addr.isLoopbackAddress() &&
-                        hostAddress.indexOf(':') == -1 &&  // No IPv6
-                        !hostAddress.startsWith("127.") &&
-                        !hostAddress.startsWith("192.168.56.") && // VirtualBox
-                        !hostAddress.startsWith("192.168.122.")) { // Otras VMs
 
-                        if (isPreferred) {
-                            return hostAddress; // Retornar inmediatamente si es una interfaz preferida
+                    if (addr.isLoopbackAddress() || hostAddress.indexOf(':') >= 0) {
+                        continue;
+                    }
+                    if (hostAddress.startsWith("169.254.")) {
+                        continue;
+                    }
+                    if (hostAddress.startsWith("192.168.56.") || hostAddress.startsWith("192.168.122.")) {
+                        continue;
+                    }
+
+                    int score = scoreAddress(hostAddress);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCandidate = hostAddress;
+                        if (score >= 4) {
+                            return hostAddress; // Mejor escenario (172.16-31)
                         }
                     }
                 }
             }
 
-            // Fallback: intentar método estándar
+            if (bestCandidate != null) {
+                return bestCandidate;
+            }
+
             InetAddress localHost = InetAddress.getLocalHost();
             String ip = localHost.getHostAddress();
 
@@ -145,7 +153,6 @@ public class MainContainer {
                 return ip;
             }
 
-            // Último recurso
             System.err.println("⚠️  No se detectó IP de red real. Usando localhost.");
             System.err.println("💡 Conecta a WiFi o Ethernet para usar en red.");
             return "localhost";
@@ -155,5 +162,34 @@ public class MainContainer {
             e.printStackTrace();
             return "localhost";
         }
+    }
+
+    private static boolean looksVirtual(NetworkInterface ni) {
+        String display = ni.getDisplayName().toLowerCase();
+        String name = ni.getName().toLowerCase();
+        return display.contains("virtual") || display.contains("vmware") || display.contains("vbox") ||
+               display.contains("hyper-v") || display.contains("docker") || display.contains("host-only") ||
+               name.startsWith("vbox") || name.startsWith("vmnet") || name.startsWith("docker") ||
+               name.startsWith("br-");
+    }
+
+    private static int scoreAddress(String hostAddress) {
+        if (hostAddress.startsWith("172.")) {
+            String[] octets = hostAddress.split("\\.");
+            if (octets.length >= 2) {
+                int second = Integer.parseInt(octets[1]);
+                if (second >= 16 && second <= 31) {
+                    return 4; // Rango privado 172.16/12
+                }
+            }
+            return 3;
+        }
+        if (hostAddress.startsWith("10.")) {
+            return 3;
+        }
+        if (hostAddress.startsWith("192.168.")) {
+            return 2;
+        }
+        return 1; // Otros casos válidos
     }
 }

@@ -61,11 +61,7 @@ Busca la dirección IP en la interfaz activa (wlan0, eth0, enp3s0, etc.)
     inet 192.168.1.100/24 brd 192.168.1.255 scope global dynamic
 ```
 
-⚠️ **IMPORTANTE:** 
-- **NO** uses IPs que empiecen con `127.` (localhost)
-- **NO** uses IPs que empiecen con `192.168.56.` (VirtualBox)
-- **NO** uses IPs que empiecen con `192.168.122.` (otras VMs)
-- Usa la IP de tu WiFi o Ethernet real
+💡 **TIP CRÍTICO:** Si `MainContainer` imprime una IP diferente (ej. `192.168.56.x` de VirtualBox), ignora ese valor y usa la IP real que obtuviste con `ipconfig/ifconfig`. También puedes forzarla al iniciar con `-Dmain.host=172.22.112.1`.
 
 ---
 
@@ -177,8 +173,22 @@ Deberías ver:
 
 ### Paso 2: Iniciar MainContainer
 
+```powershell
+# Windows PowerShell
+dotnet ;
+```
+
 ```bash
+# Linux/macOS
+dotnet ;
+```
+
+```bash
+# Ejecución estándar
 java -cp target/classes com.medical.jade.launcher.MainContainer
+
+# Si deseas forzar la IP detectada (recomendado cuando hay adaptadores virtuales)
+java -Dmain.host=172.22.112.1 -cp target/classes com.medical.jade.launcher.MainContainer
 ```
 
 **Flags opcionales:**
