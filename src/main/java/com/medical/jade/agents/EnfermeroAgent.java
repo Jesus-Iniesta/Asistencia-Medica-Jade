@@ -8,14 +8,21 @@ import com.google.gson.Gson;
 import com.medical.jade.messages.Cita;
 import com.medical.jade.messages.HistoriaClinica;
 import com.medical.jade.behaviours.*;
+import com.medical.jade.network.RemoteMessagingService;
 
 public class EnfermeroAgent extends Agent {
     private Gson gson = new Gson();
     private int pacientesAtendidos = 0;
+    private String remoteDoctorName = "Doctor";
 
     @Override
     protected void setup() {
         System.out.println("✅ Enfermero " + getLocalName() + " está listo");
+
+        Object[] args = getArguments();
+        if (args != null && args.length > 0 && args[0] instanceof String target) {
+            remoteDoctorName = target;
+        }
 
         // Registrar servicio
         addBehaviour(new RegisterServiceBehaviour("atencion-medica", "enfermeria"));
@@ -73,9 +80,15 @@ public class EnfermeroAgent extends Agent {
                                         gson.toJson(historia)
                                 ));
                                 System.out.println("✉️ Historia clínica enviada al Doctor\n");
-                                break;
+                                return;
                             }
                         }
+
+                        RemoteMessagingService.sendRemote(this,
+                                remoteDoctorName,
+                                ACLMessage.REQUEST,
+                                gson.toJson(historia));
+                        System.out.println("🌐 Historia clínica enviada al doctor remoto vía bridge\n");
                     }));
 
                     monitor.incrementMessageCount();

@@ -1,5 +1,6 @@
 package com.medical.jade.launcher;
 
+import com.medical.jade.agents.NetworkBridgeAgent;
 import jade.core.Runtime;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
@@ -18,11 +19,15 @@ public class MainContainer {
 
             // Obtener la IP local REAL (evitando VirtualBox y loopback)
             String localIP = getRealLocalIP();
+            int bridgePort = Integer.parseInt(System.getProperty(
+                    "bridge.port",
+                    String.valueOf(NetworkBridgeAgent.DEFAULT_PORT)));
 
             System.out.println("===========================================");
             System.out.println("🔍 DETECTANDO CONFIGURACIÓN DE RED...");
             System.out.println("===========================================");
             System.out.println("📍 IP detectada: " + localIP);
+            System.out.println("🔌 Puerto socket puente: " + bridgePort);
 
             // Configuración CRÍTICA para conexiones remotas
             profile.setParameter(Profile.MAIN_HOST, localIP);
@@ -37,19 +42,29 @@ public class MainContainer {
             // Crear contenedor principal
             ContainerController mainContainer = rt.createMainContainer(profile);
 
+            // Crear puente de red vía sockets
+            AgentController networkBridge = mainContainer.createNewAgent(
+                    NetworkBridgeAgent.AGENT_NAME,
+                    "com.medical.jade.agents.NetworkBridgeAgent",
+                    new Object[]{NetworkBridgeAgent.Mode.SERVER.name(), bridgePort}
+            );
+            networkBridge.start();
+
             System.out.println("\n===========================================");
             System.out.println("🏥 COMPUTADORA PRINCIPAL - INICIADA");
             System.out.println("===========================================");
             System.out.println("📍 IP del Servidor: " + localIP);
             System.out.println("🔌 Puerto JADE: 1099");
             System.out.println("🌐 Puerto Web: 7070");
+            System.out.println("🔗 Puerto Socket JADE Bridge: " + bridgePort);
             System.out.println("===========================================");
 
             System.out.println("\n📋 INSTRUCCIONES PARA COMPUTADORA SECUNDARIA:");
             System.out.println("   1. Abre RemoteContainer.java");
             System.out.println("   2. Cambia la línea 26 a:");
             System.out.println("      String mainHost = \"" + localIP + "\";");
-            System.out.println("   3. Ejecuta RemoteContainer");
+            System.out.println("   3. Ajusta RemoteContainer para usar el puerto " + bridgePort + " (bridgePort)");
+            System.out.println("   4. Ejecuta RemoteContainer");
             System.out.println("===========================================\n");
 
             // COMPUTADORA PRINCIPAL: Recepcionista + Enfermero
@@ -72,6 +87,7 @@ public class MainContainer {
             System.out.println("✅ AGENTES ACTIVOS EN COMPUTADORA PRINCIPAL:");
             System.out.println("   1. Recepcionista - Registra citas");
             System.out.println("   2. Enfermero - Toma signos vitales");
+            System.out.println("   3. NetworkBridge - Encaminamiento TCP");
             System.out.println("\n⏳ Esperando conexión de Computadora Secundaria (Doctor)...\n");
 
         } catch (Exception e) {

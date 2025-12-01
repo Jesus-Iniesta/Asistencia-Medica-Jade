@@ -7,14 +7,20 @@ import jade.lang.acl.MessageTemplate;
 import com.google.gson.Gson;
 import com.medical.jade.messages.Cita;
 import com.medical.jade.behaviours.*;
+import com.medical.jade.network.RemoteMessagingService;
 
 public class RecepcionistaAgent extends Agent {
     private Gson gson = new Gson();
     private int turnosAsignados = 0;
+    private String remoteDoctorName = "Doctor";
 
     @Override
     protected void setup() {
         System.out.println("✅ Recepcionista " + getLocalName() + " está listo");
+        Object[] args = getArguments();
+        if (args != null && args.length > 0 && args[0] instanceof String target) {
+            remoteDoctorName = target;
+        }
 
         // Registrar servicio en el DF (Directory Facilitator)
         addBehaviour(new RegisterServiceBehaviour("atencion-medica", "recepcion"));
@@ -65,9 +71,16 @@ public class RecepcionistaAgent extends Agent {
                                 gson.toJson(cita)
                         ));
                         System.out.println("✉️ Cita enviada al Enfermero");
-                        break;
+                        return;
                     }
                 }
+
+                // Si no hay enfermeros locales, reenviar al remoto via socket
+                RemoteMessagingService.sendRemote(this,
+                        remoteDoctorName,
+                        ACLMessage.REQUEST,
+                        gson.toJson(cita));
+                System.out.println("🌐 Cita enviada al doctor remoto vía bridge");
             }));
 
             monitor.incrementMessageCount();

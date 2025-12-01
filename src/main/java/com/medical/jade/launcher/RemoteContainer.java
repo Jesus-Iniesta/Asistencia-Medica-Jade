@@ -1,5 +1,6 @@
 package com.medical.jade.launcher;
 
+import com.medical.jade.agents.NetworkBridgeAgent;
 import jade.core.Runtime;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
@@ -29,6 +30,9 @@ public class RemoteContainer {
 
             // ⬇️ PEGA AQUÍ LA IP QUE MUESTRA MainContainer
             String mainHost = "10.211.172.68";
+            int bridgePort = Integer.parseInt(System.getProperty(
+                    "bridge.port",
+                    String.valueOf(NetworkBridgeAgent.DEFAULT_PORT)));
 
             // Ejemplos:
             // String mainHost = "192.168.1.100";  // IP de la computadora principal
@@ -44,6 +48,7 @@ public class RemoteContainer {
             System.out.println("===========================================");
             System.out.println("📍 IP de esta computadora: " + localIP);
             System.out.println("🔌 Intentando conectar a: " + mainHost + ":1099");
+            System.out.println("🌐 Puerto socket puente: " + bridgePort);
             System.out.println("⏳ Esto puede tomar unos segundos...\n");
 
             // Configuración del contenedor remoto
@@ -70,12 +75,18 @@ public class RemoteContainer {
 
             doctor.start();
 
-            System.out.println("\n===========================================");
-            System.out.println("✅ CONTENEDOR REMOTO ACTIVO");
+            // Crear bridge TCP en modo cliente hacia la computadora principal
+            System.out.println("🌐 Conectando bridge TCP al host principal...");
+            AgentController networkBridge = remoteContainer.createNewAgent(
+                    NetworkBridgeAgent.AGENT_NAME,
+                    "com.medical.jade.agents.NetworkBridgeAgent",
+                    new Object[]{NetworkBridgeAgent.Mode.CLIENT.name(), mainHost, bridgePort}
+            );
+            networkBridge.start();
+
             System.out.println("===========================================");
-            System.out.println("📍 IP local: " + localIP);
-            System.out.println("📍 Conectado a: " + mainHost);
             System.out.println("👨‍⚕️ Agente activo: Doctor");
+            System.out.println("🔗 Bridge TCP activo en puerto remoto: " + bridgePort);
             System.out.println("===========================================");
             System.out.println("\n💡 El Doctor está listo para atender pacientes");
             System.out.println("🔗 Comunicándose con la computadora principal");
