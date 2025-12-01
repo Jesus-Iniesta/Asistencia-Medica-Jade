@@ -25,8 +25,8 @@ El sistema implementa una arquitectura distribuida basada en agentes JADE (Java 
 │  │  MainContainer│  │WebContainer  │  │RemoteContainer│    │
 │  │              │  │              │  │              │     │
 │  │ Recepcionista│  │   Servidor   │  │    Doctor    │     │
-│  │  Enfermero   │  │     Web      │  │              │     │
-│  │  (Pacientes) │  │              │  │              │     │
+│  │  Enfermero   │  │     Web      │  │  NetworkBridge│    │
+│  │ NetworkBridge│  │              │  │  (Cliente)    │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -35,7 +35,11 @@ El sistema implementa una arquitectura distribuida basada en agentes JADE (Java 
     │  JADE   │          │   HTTP  │         │  JADE   │
     │Messages │          │   API   │         │Messages │
     └─────────┘          └─────────┘         └─────────┘
+         ↘                                      ↙
+           ──────────── TCP Socket 6200 ─────────
 ```
+
+**Puente TCP entre plataformas:** `NetworkBridgeAgent` crea un túnel bidireccional mediante sockets puros (modo `SERVER` en la computadora principal y `CLIENT` en la remota). Los mensajes JADE que deban viajar entre plataformas se encapsulan en `RemoteMessageEnvelope`, se serializan a JSON (Gson) y se envían por el puerto configurable (6200 por defecto, sobreescribible con `-Dbridge.port=PUERTO`). Este puente evita depender de RMI y mantiene la interoperabilidad incluso si las plataformas están separadas por firewalls más restrictivos.
 
 ---
 
@@ -429,7 +433,31 @@ class PatternDiagnostico {
 
 ---
 
-### 4. **PacienteAgent** 👤
+### 4. **NetworkBridgeAgent** 🌐
+
+**Responsabilidad:** Encapsular y transportar mensajes ACL entre contenedores JADE que viven en equipos distintos, usando un socket TCP persistente.
+
+**Ubicación:** Se despliega en ambos lados. `MainContainer` lo crea en modo `SERVER`; `RemoteContainer` lo inicia en modo `CLIENT` apuntando a la IP/puerto del servidor.
+
+**Modos y parámetros:**
+- `Mode.SERVER [puerto]`: abre un `ServerSocket` (6200 por defecto) y espera conexiones entrantes.
+- `Mode.CLIENT host puerto`: intenta conectarse repetidamente al servidor (`retry` cada 3 segundos) hasta lograr el enlace.
+- Metadatos obligatorios en los mensajes: `REMOTE_TARGET`, `REMOTE_PERFORMATIVE`, `REMOTE_SOURCE`.
+
+**Ciclo de vida:**
+- `ReceiveMessageBehaviour` filtra mensajes con ontología `REMOTE-FORWARD`, los empaca en `RemoteMessageEnvelope` y los encola.
+- Un `sendLoop` y un `receiveLoop` corren en paralelo, garantizando escritura y lectura separadas del socket.
+- Cada mensaje recibido se reconstruye como `ACLMessage`, se marca con `REMOTE_SOURCE=true` y se reinyecta en la plataforma destino, conservando `performative`, `sender`, `receiver` y `content`.
+- El agente gestiona reconexiones automáticas, `TCP_NODELAY`, `BufferedReader/Writer` en UTF-8 y cierre ordenado en `takeDown()`.
+
+**Integración con otros componentes:**
+- `RemoteMessagingService` adjunta los parámetros remotos antes de enviar al bridge.
+- `MainContainer` y `RemoteContainer` exponen la propiedad del puente (`bridge.port`) para coordinar múltiples entornos.
+- Gracias a este puente, el doctor remoto puede ejecutar diagnósticos aunque la red impida conexiones RMI directas.
+
+---
+
+### 5. **PacienteAgent** 👤
 
 **Responsabilidad:** Representar a un paciente en el sistema, enviar solicitudes de cita.
 

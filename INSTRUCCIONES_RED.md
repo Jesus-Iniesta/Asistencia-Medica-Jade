@@ -7,6 +7,7 @@
 4. [Computadora Secundaria](#computadora-secundaria-cliente)
 5. [Prueba del Sistema](#prueba-del-sistema)
 6. [Solución de Problemas](#solución-de-problemas)
+7. [Puente TCP (NetworkBridgeAgent)](#puente-tcp-networkbridgeagent)
 
 ---
 
@@ -32,6 +33,7 @@
 - 📡 Ambas computadoras en la **misma red local** (WiFi o Ethernet)
 - 🔓 **Puerto 1099** abierto en el firewall (JADE)
 - 🔓 **Puerto 7070** abierto en el firewall (Servidor Web)
+- 🔓 **Puerto 6200** (o el definido en `-Dbridge.port`) abierto para el **NetworkBridgeAgent**
 
 ---
 
@@ -88,7 +90,7 @@ El error **"No existe ninguna ruta hasta el host"** generalmente se debe al fire
 3. Selecciona **"Reglas de entrada"**
 4. Clic en **"Nueva regla"**
 5. Selecciona **"Puerto"** → Siguiente
-6. Selecciona **"TCP"** y escribe: `1099, 7070`
+6. Selecciona **"TCP"** y escribe: `1099, 7070, 6200`
 7. Selecciona **"Permitir la conexión"**
 8. Marca todas las opciones (Dominio, Privado, Público)
 9. Dale un nombre: **"JADE Sistema Médico"**
@@ -98,6 +100,7 @@ El error **"No existe ninguna ruta hasta el host"** generalmente se debe al fire
 # Permitir puertos
 sudo ufw allow 1099/tcp
 sudo ufw allow 7070/tcp
+sudo ufw allow 6200/tcp
 sudo ufw reload
 
 # Verificar reglas
@@ -109,6 +112,7 @@ sudo ufw status
 # Permitir puertos
 sudo firewall-cmd --permanent --add-port=1099/tcp
 sudo firewall-cmd --permanent --add-port=7070/tcp
+sudo firewall-cmd --permanent --add-port=6200/tcp
 sudo firewall-cmd --reload
 
 # Verificar
@@ -177,6 +181,9 @@ Deberías ver:
 java -cp target/classes com.medical.jade.launcher.MainContainer
 ```
 
+**Flags opcionales:**
+- `-Dbridge.port=6300` → cambia el puerto del socket puente si 6200 ya está ocupado.
+
 **Salida esperada:**
 ```
 ===========================================
@@ -190,13 +197,15 @@ java -cp target/classes com.medical.jade.launcher.MainContainer
 📍 IP del Servidor: 192.168.1.100
 🔌 Puerto JADE: 1099
 🌐 Puerto Web: 7070
+🔗 Puerto Socket JADE Bridge: 6200
 ===========================================
 
 📋 INSTRUCCIONES PARA COMPUTADORA SECUNDARIA:
    1. Abre RemoteContainer.java
    2. Cambia la línea 26 a:
       String mainHost = "192.168.1.100";
-   3. Ejecuta RemoteContainer
+   3. Ajusta RemoteContainer para usar el puerto 6200 (bridgePort)
+   4. Ejecuta RemoteContainer
 ===========================================
 
 ✅ AGENTES ACTIVOS EN COMPUTADORA PRINCIPAL:
@@ -253,27 +262,9 @@ Opciones:
 
 ### Paso 2: Configurar la IP del Servidor
 
-1. Abre el archivo **`RemoteContainer.java`**
-2. Localiza la línea 26:
-   ```java
-   String mainHost = "172.26.49.144";
-   ```
-3. **Reemplázala** con la IP que te mostró MainContainer:
-   ```java
-   String mainHost = "192.168.1.100";  // IP de TU computadora principal
-   ```
-4. **Guarda el archivo**
-
----
-
-### Paso 3: Compilar el Proyecto
-
-```bash
-cd /ruta/al/proyecto/SistemaMedico
-mvn clean package
-```
-
----
+1. Abre `RemoteContainer.java`
+2. Reemplaza `mainHost` con la IP detectada por el servidor.
+3. (Opcional) Si cambiaste el puerto del puente, agrega `-Dbridge.port=PUERTO` al ejecutar este contenedor o ajusta la propiedad `bridgePort` en Java.
 
 ### Paso 4: Ejecutar RemoteContainer
 
@@ -299,6 +290,7 @@ java -cp target/classes com.medical.jade.launcher.RemoteContainer
 ===========================================
 📍 Conectado a: 192.168.1.100
 👨‍⚕️ Agente activo: Doctor
+🔗 Bridge TCP activo en puerto remoto: 6200
 ===========================================
 
 💡 El Doctor está listo para atender pacientes
@@ -360,6 +352,7 @@ sudo ufw disable
 sudo ufw enable
 sudo ufw allow 1099/tcp
 sudo ufw allow 7070/tcp
+sudo ufw allow 6200/tcp
 ```
 
 #### 2. Verificar que están en la misma red
@@ -472,3 +465,29 @@ Si sigues teniendo problemas después de seguir todos estos pasos:
 2. Compila el proyecto limpiamente: `mvn clean package`
 3. Revisa los logs de errores completos
 4. Verifica que no haya otros programas usando el puerto 1099
+
+---
+
+## 🔗 Puente TCP (NetworkBridgeAgent)
+
+El agente `NetworkBridgeAgent` sincroniza los mensajes ACL entre las plataformas JADE cuando el doctor se ejecuta en otra computadora.
+
+### Despliegue
+- **Servidor (MainContainer)**: inicia el bridge en modo `SERVER` escuchando en el puerto `bridge.port` (6200 por defecto).
+- **Cliente (RemoteContainer)**: levanta otro bridge en modo `CLIENT`, apuntando a `mainHost` y al mismo puerto.
+
+### Propiedad `bridge.port`
+- Cambiable con `-Dbridge.port=PUERTO` tanto en `MainContainer` como en `RemoteContainer`.
+- Útil si 6200 ya está en uso o si se necesita un puerto autorizado distinto.
+
+### Verificación rápida
+1. Inicia `MainContainer` y confirma el mensaje `🕓 NetworkBridge esperando conexión en puerto ...`.
+2. Desde la computadora remota ejecuta `Test-NetConnection -ComputerName <IP_SERVIDOR> -Port <PUERTO>`.
+3. Si no conecta, revisa firewall/routers.
+
+### Logs Clave
+- `🔗 NetworkBridge enlazado...` → puente activo.
+- `⏳ No se pudo conectar...` → cliente reintentando conexión.
+- `🔁 entregó mensaje...` → tráfico JADE atravesando el socket.
+
+Mantén ambos procesos abiertos; si el socket se cae, el agente intentará reconectarse automáticamente cada 3 segundos.
